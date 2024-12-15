@@ -5,6 +5,7 @@ import { AlertCircle } from "lucide-react";
 import { extractSongInfo, getLyrics } from "@/services/lyricsService";
 import { Controls } from "./Controls";
 import { URLInput } from "./URLInput";
+import { Input } from "../ui/input";
 
 interface VideoPlayerProps {
   onVideoLoad?: (lyrics?: string) => void;
@@ -12,12 +13,18 @@ interface VideoPlayerProps {
 
 export const VideoPlayer: React.FC<VideoPlayerProps> = ({ onVideoLoad }) => {
   const [url, setUrl] = useState("");
+  const [apiKey, setApiKey] = useState(() => localStorage.getItem("xai_api_key") || "");
   const [videoId, setVideoId] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const playerRef = useRef<YT.Player | null>(null);
 
   useEffect(() => {
-    // Load YouTube IFrame API
+    if (apiKey) {
+      localStorage.setItem("xai_api_key", apiKey);
+    }
+  }, [apiKey]);
+
+  useEffect(() => {
     const tag = document.createElement("script");
     tag.src = "https://www.youtube.com/iframe_api";
     const firstScriptTag = document.getElementsByTagName("script")[0];
@@ -37,7 +44,16 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ onVideoLoad }) => {
   };
 
   const fetchLyrics = async (title: string) => {
-    const songInfo = extractSongInfo(title);
+    if (!apiKey) {
+      toast({
+        title: "API Key Required",
+        description: "Please enter your X.AI API key to enable better title parsing",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const songInfo = await extractSongInfo(title, apiKey);
     if (!songInfo) {
       toast({
         title: "Could not extract song information",
@@ -73,10 +89,9 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ onVideoLoad }) => {
         },
         events: {
           onReady: async (event) => {
-            const player = event.target;
-            const videoData = player.getVideoData?.();
-            if (videoData?.title) {
-              await fetchLyrics(videoData.title);
+            const videoTitle = event.target.getVideoData().title;
+            if (videoTitle) {
+              await fetchLyrics(videoTitle);
             }
           },
           onStateChange: (event) => {
@@ -121,6 +136,16 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ onVideoLoad }) => {
 
   return (
     <Card className="p-6 glass-panel">
+      <div className="mb-4">
+        <Input
+          type="password"
+          value={apiKey}
+          onChange={(e) => setApiKey(e.target.value)}
+          placeholder="Enter X.AI API Key"
+          className="mb-4"
+        />
+      </div>
+
       <URLInput 
         url={url} 
         onUrlChange={setUrl} 
