@@ -6,16 +6,10 @@ const Index = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [lyrics, setLyrics] = useState<string | undefined>();
 
-  const handleVideoLoad = async () => {
+  const handleVideoLoad = async (newLyrics?: string) => {
     setIsLoading(true);
-    // TODO: Implement lyrics fetching
-    // For now, we'll use placeholder lyrics
-    setTimeout(() => {
-      setLyrics(
-        "This is a placeholder for lyrics.\n\nWhen connected to the lyrics API,\nreal lyrics will appear here.\n\nThe lyrics will be properly formatted\nand synchronized with the video playback."
-      );
-      setIsLoading(false);
-    }, 1500);
+    setLyrics(newLyrics);
+    setIsLoading(false);
   };
 
   return (

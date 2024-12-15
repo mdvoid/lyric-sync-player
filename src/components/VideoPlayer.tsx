@@ -12,9 +12,10 @@ import {
   Rewind,
   FastForward
 } from "lucide-react";
+import { extractSongInfo, searchLyrics, getLyrics } from "@/services/lyricsService";
 
 interface VideoPlayerProps {
-  onVideoLoad?: () => void;
+  onVideoLoad?: (lyrics?: string) => void;
 }
 
 export const VideoPlayer: React.FC<VideoPlayerProps> = ({ onVideoLoad }) => {
@@ -43,6 +44,39 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ onVideoLoad }) => {
     return match ? match[1] : null;
   };
 
+  const fetchLyrics = async (title: string) => {
+    const songInfo = extractSongInfo(title);
+    if (!songInfo) {
+      toast({
+        title: "Could not extract song information",
+        description: "Please check if the video title follows the format 'Artist - Song'",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const metadata = await searchLyrics(songInfo.artist, songInfo.song);
+    if (!metadata) {
+      toast({
+        title: "Lyrics not found",
+        description: "Could not find lyrics for this song",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const lyrics = await getLyrics(metadata.lyricId, metadata.lyricChecksum);
+    if (lyrics) {
+      onVideoLoad?.(lyrics);
+    } else {
+      toast({
+        title: "Error fetching lyrics",
+        description: "Could not fetch the lyrics for this song",
+        variant: "destructive",
+      });
+    }
+  };
+
   const initializePlayer = (videoId: string) => {
     if (window.YT && window.YT.Player) {
       playerRef.current = new window.YT.Player("youtube-player", {
@@ -56,8 +90,9 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ onVideoLoad }) => {
           rel: 0,
         },
         events: {
-          onReady: () => {
-            onVideoLoad?.();
+          onReady: async (event) => {
+            const videoTitle = event.target.getVideoData().title;
+            await fetchLyrics(videoTitle);
           },
           onStateChange: (event) => {
             setIsPlaying(event.data === window.YT.PlayerState.PLAYING);
