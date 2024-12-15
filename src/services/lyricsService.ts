@@ -4,14 +4,13 @@ interface SongInfo {
 }
 
 const sanitizeForUrl = (text: string): string => {
-  // Remove special characters and extra spaces
   return text
     .replace(/[^\w\s-]/g, '')
     .trim()
     .replace(/\s+/g, ' ');
 };
 
-const parseVideoTitleWithAI = async (videoTitle: string, apiKey: string): Promise<SongInfo | null> => {
+export const extractSongInfo = async (videoTitle: string, apiKey: string): Promise<SongInfo | null> => {
   try {
     const response = await fetch('https://api.x.ai/v1/chat/completions', {
       method: 'POST',
@@ -37,7 +36,9 @@ const parseVideoTitleWithAI = async (videoTitle: string, apiKey: string): Promis
     });
 
     if (!response.ok) {
-      throw new Error('Failed to parse video title');
+      const errorData = await response.text();
+      console.error('X.AI API Error:', errorData);
+      return null;
     }
 
     const data = await response.json();
@@ -53,51 +54,14 @@ const parseVideoTitleWithAI = async (videoTitle: string, apiKey: string): Promis
   }
 };
 
-export const extractSongInfo = async (videoTitle: string, apiKey: string): Promise<SongInfo | null> => {
-  // First try AI parsing
-  const aiResult = await parseVideoTitleWithAI(videoTitle, apiKey);
-  if (aiResult) {
-    return aiResult;
-  }
-
-  // Fallback to regex parsing if AI fails
-  const patterns = [
-    /^(.+?)\s*-\s*(.+?)(?:\s*\(.*?\))*(?:\s*\[.*?\])*\s*$/,
-    /^(.+?)\s*"\s*(.+?)\s*"(?:\s*\(.*?\))*(?:\s*\[.*?\])*\s*$/,
-    /^(.+?)\s*:\s*(.+?)(?:\s*\(.*?\))*(?:\s*\[.*?\])*\s*$/,
-  ];
-
-  for (const pattern of patterns) {
-    const match = videoTitle.match(pattern);
-    if (match) {
-      return {
-        artist: sanitizeForUrl(match[1]),
-        song: sanitizeForUrl(match[2])
-      };
-    }
-  }
-
-  return null;
-};
-
-export const searchLyrics = async (artist: string, song: string) => {
+export const getLyrics = async (artist: string, song: string): Promise<string | null> => {
   try {
     const response = await fetch(`https://api.lyrics.ovh/v1/${encodeURIComponent(artist)}/${encodeURIComponent(song)}`);
     if (!response.ok) {
       throw new Error('Failed to fetch lyrics');
     }
     const data = await response.json();
-    return data;
-  } catch (error) {
-    console.error('Error searching lyrics:', error);
-    return null;
-  }
-};
-
-export const getLyrics = async (artist: string, song: string): Promise<string | null> => {
-  try {
-    const data = await searchLyrics(artist, song);
-    return data?.lyrics || null;
+    return data.lyrics || null;
   } catch (error) {
     console.error('Error fetching lyrics:', error);
     return null;

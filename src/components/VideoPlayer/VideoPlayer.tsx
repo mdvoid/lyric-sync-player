@@ -11,6 +11,18 @@ interface VideoPlayerProps {
   onVideoLoad?: (lyrics?: string) => void;
 }
 
+declare global {
+  interface Window {
+    YT: {
+      Player: new (elementId: string, config: any) => YT.Player;
+      PlayerState: {
+        PLAYING: number;
+      };
+    };
+    onYouTubeIframeAPIReady: () => void;
+  }
+}
+
 export const VideoPlayer: React.FC<VideoPlayerProps> = ({ onVideoLoad }) => {
   const [url, setUrl] = useState("");
   const [apiKey, setApiKey] = useState(() => localStorage.getItem("xai_api_key") || "");
@@ -89,9 +101,10 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ onVideoLoad }) => {
         },
         events: {
           onReady: async (event) => {
-            const videoTitle = event.target.getVideoData().title;
-            if (videoTitle) {
-              await fetchLyrics(videoTitle);
+            const player = event.target as YT.Player;
+            const videoData = player.getVideoData();
+            if (videoData?.title) {
+              await fetchLyrics(videoData.title);
             }
           },
           onStateChange: (event) => {
