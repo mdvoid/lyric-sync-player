@@ -8,7 +8,9 @@ import {
   Pause, 
   RotateCcw, 
   RotateCw,
-  AlertCircle
+  AlertCircle,
+  Rewind,
+  FastForward
 } from "lucide-react";
 
 interface VideoPlayerProps {
@@ -80,6 +82,13 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ onVideoLoad }) => {
     }
   };
 
+  const handleSeek = (seconds: number) => {
+    if (playerRef.current) {
+      const currentTime = playerRef.current.getCurrentTime();
+      playerRef.current.seekTo(currentTime + seconds, true);
+    }
+  };
+
   const handlePlayPause = () => {
     if (playerRef.current) {
       if (isPlaying) {
@@ -87,13 +96,6 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ onVideoLoad }) => {
       } else {
         playerRef.current.playVideo();
       }
-    }
-  };
-
-  const handleSeek = (seconds: number) => {
-    if (playerRef.current) {
-      const currentTime = playerRef.current.getCurrentTime();
-      playerRef.current.seekTo(currentTime + seconds, true);
     }
   };
 
@@ -121,35 +123,81 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ onVideoLoad }) => {
         <div id="youtube-player" />
       </div>
 
-      <div className="flex justify-center gap-2">
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={() => handleSeek(-10)}
-          className="hover-scale"
-        >
-          <RotateCcw className="h-4 w-4" />
-        </Button>
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={handlePlayPause}
-          className="hover-scale"
-        >
-          {isPlaying ? (
-            <Pause className="h-4 w-4" />
-          ) : (
-            <Play className="h-4 w-4" />
-          )}
-        </Button>
-        <Button
-          variant="outline"
-          size="icon"
-          onClick={() => handleSeek(10)}
-          className="hover-scale"
-        >
-          <RotateCw className="h-4 w-4" />
-        </Button>
+      <div className="flex flex-col gap-3">
+        <div className="flex justify-center gap-2">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => handleSeek(-20)}
+            className="hover-scale"
+            title="Backward 20s"
+          >
+            <Rewind className="h-4 w-4" />
+            <span className="absolute -bottom-5 text-xs">20s</span>
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => handleSeek(-10)}
+            className="hover-scale"
+            title="Backward 10s"
+          >
+            <RotateCcw className="h-4 w-4" />
+            <span className="absolute -bottom-5 text-xs">10s</span>
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => handleSeek(-5)}
+            className="hover-scale"
+            title="Backward 5s"
+          >
+            <RotateCcw className="h-4 w-4" />
+            <span className="absolute -bottom-5 text-xs">5s</span>
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={handlePlayPause}
+            className="hover-scale"
+          >
+            {isPlaying ? (
+              <Pause className="h-4 w-4" />
+            ) : (
+              <Play className="h-4 w-4" />
+            )}
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => handleSeek(5)}
+            className="hover-scale"
+            title="Forward 5s"
+          >
+            <RotateCw className="h-4 w-4" />
+            <span className="absolute -bottom-5 text-xs">5s</span>
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => handleSeek(10)}
+            className="hover-scale"
+            title="Forward 10s"
+          >
+            <RotateCw className="h-4 w-4" />
+            <span className="absolute -bottom-5 text-xs">10s</span>
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => handleSeek(20)}
+            className="hover-scale"
+            title="Forward 20s"
+          >
+            <FastForward className="h-4 w-4" />
+            <span className="absolute -bottom-5 text-xs">20s</span>
+          </Button>
+        </div>
       </div>
     </Card>
   );
