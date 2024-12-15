@@ -26,21 +26,22 @@ export const extractSongInfo = (videoTitle: string): SongInfo | null => {
 
 export const searchLyrics = async (artist: string, song: string) => {
   try {
-    // For demo purposes, return mock lyrics since we can't use real API without keys
-    return {
-      lyricId: 1,
-      lyricChecksum: "demo"
-    };
+    const response = await fetch(`https://api.lyrics.ovh/v1/${encodeURIComponent(artist)}/${encodeURIComponent(song)}`);
+    if (!response.ok) {
+      throw new Error('Failed to fetch lyrics');
+    }
+    const data = await response.json();
+    return data;
   } catch (error) {
     console.error('Error searching lyrics:', error);
     return null;
   }
 };
 
-export const getLyrics = async (lyricId: number, lyricChecksum: string): Promise<string | null> => {
+export const getLyrics = async (artist: string, song: string): Promise<string | null> => {
   try {
-    // For demo purposes, return mock lyrics
-    return `[Demo Lyrics]\n\nThis is a placeholder for lyrics\nSince we can't access the real API\nYou would need to:\n\n1. Sign up for a lyrics API service\n2. Get an API key\n3. Use their HTTPS endpoint\n4. Handle CORS properly\n\nFor now, this demonstrates the functionality\nWith mock data for ${lyricId} - ${lyricChecksum}`;
+    const data = await searchLyrics(artist, song);
+    return data?.lyrics || null;
   } catch (error) {
     console.error('Error fetching lyrics:', error);
     return null;

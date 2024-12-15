@@ -2,7 +2,7 @@ import React, { useRef, useEffect, useState } from "react";
 import { Card } from "../ui/card";
 import { toast } from "../ui/use-toast";
 import { AlertCircle } from "lucide-react";
-import { extractSongInfo, searchLyrics, getLyrics } from "@/services/lyricsService";
+import { extractSongInfo, getLyrics } from "@/services/lyricsService";
 import { Controls } from "./Controls";
 import { URLInput } from "./URLInput";
 
@@ -47,17 +47,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ onVideoLoad }) => {
       return;
     }
 
-    const metadata = await searchLyrics(songInfo.artist, songInfo.song);
-    if (!metadata) {
-      toast({
-        title: "Lyrics not found",
-        description: "Could not find lyrics for this song",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const lyrics = await getLyrics(metadata.lyricId, metadata.lyricChecksum);
+    const lyrics = await getLyrics(songInfo.artist, songInfo.song);
     if (lyrics) {
       onVideoLoad?.(lyrics);
     } else {
@@ -84,8 +74,8 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ onVideoLoad }) => {
         events: {
           onReady: async (event) => {
             const player = event.target;
-            const videoData = player.getVideoData();
-            if (videoData && videoData.title) {
+            const videoData = player.getVideoData?.();
+            if (videoData?.title) {
               await fetchLyrics(videoData.title);
             }
           },
