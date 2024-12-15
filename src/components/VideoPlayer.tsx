@@ -12,20 +12,54 @@ import {
   Rewind,
   FastForward
 } from "lucide-react";
-import { extractSongInfo, searchLyrics, getLyrics } from "@/services/lyricsService";
+import { extractSongInfo, getLyrics } from "@/services/lyricsService";
 
 interface VideoPlayerProps {
   onVideoLoad?: (lyrics?: string) => void;
 }
 
+// Extend the YT.Player type to include getVideoData
+declare global {
+  interface Window {
+    YT: {
+      Player: new (elementId: string, options: YT.PlayerOptions) => YT.Player;
+      PlayerState: {
+        PLAYING: number;
+        PAUSED: number;
+        ENDED: number;
+      };
+    };
+    onYouTubeIframeAPIReady: () => void;
+  }
+}
+
+interface VideoData {
+  title: string;
+  author: string;
+  video_id: string;
+}
+
+// Extend the YT.Player interface to include getVideoData
+declare module 'youtube' {
+  interface Player {
+    getVideoData(): VideoData;
+  }
+}
+
 export const VideoPlayer: React.FC<VideoPlayerProps> = ({ onVideoLoad }) => {
   const [url, setUrl] = useState("");
+  const [apiKey, setApiKey] = useState(() => localStorage.getItem("xai_api_key") || "");
   const [videoId, setVideoId] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const playerRef = useRef<YT.Player | null>(null);
 
   useEffect(() => {
-    // Load YouTube IFrame API
+    if (apiKey) {
+      localStorage.setItem("xai_api_key", apiKey);
+    }
+  }, [apiKey]);
+
+  useEffect(() => {
     const tag = document.createElement("script");
     tag.src = "https://www.youtube.com/iframe_api";
     const firstScriptTag = document.getElementsByTagName("script")[0];
@@ -45,7 +79,16 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ onVideoLoad }) => {
   };
 
   const fetchLyrics = async (title: string) => {
-    const songInfo = extractSongInfo(title);
+    if (!apiKey) {
+      toast({
+        title: "API Key Required",
+        description: "Please enter your X.AI API key to enable better title parsing",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const songInfo = await extractSongInfo(title, apiKey);
     if (!songInfo) {
       toast({
         title: "Could not extract song information",
@@ -55,17 +98,7 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ onVideoLoad }) => {
       return;
     }
 
-    const metadata = await searchLyrics(songInfo.artist, songInfo.song);
-    if (!metadata) {
-      toast({
-        title: "Lyrics not found",
-        description: "Could not find lyrics for this song",
-        variant: "destructive",
-      });
-      return;
-    }
-
-    const lyrics = await getLyrics(metadata.lyricId, metadata.lyricChecksum);
+    const lyrics = await getLyrics(songInfo.artist, songInfo.song);
     if (lyrics) {
       onVideoLoad?.(lyrics);
     } else {
@@ -73,31 +106,6 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ onVideoLoad }) => {
         title: "Error fetching lyrics",
         description: "Could not fetch the lyrics for this song",
         variant: "destructive",
-      });
-    }
-  };
-
-  const initializePlayer = (videoId: string) => {
-    if (window.YT && window.YT.Player) {
-      playerRef.current = new window.YT.Player("youtube-player", {
-        height: "360",
-        width: "640",
-        videoId,
-        playerVars: {
-          autoplay: 0,
-          controls: 0,
-          modestbranding: 1,
-          rel: 0,
-        },
-        events: {
-          onReady: async (event) => {
-            const videoTitle = event.target.getVideoData().title;
-            await fetchLyrics(videoTitle);
-          },
-          onStateChange: (event) => {
-            setIsPlaying(event.data === window.YT.PlayerState.PLAYING);
-          },
-        },
       });
     }
   };
@@ -134,8 +142,46 @@ export const VideoPlayer: React.FC<VideoPlayerProps> = ({ onVideoLoad }) => {
     }
   };
 
+  const initializePlayer = (videoId: string) => {
+    if (window.YT && window.YT.Player) {
+      playerRef.current = new window.YT.Player("youtube-player", {
+        height: "360",
+        width: "640",
+        videoId,
+        playerVars: {
+          autoplay: 0,
+          controls: 0,
+          modestbranding: 1,
+          rel: 0,
+        },
+        events: {
+          onReady: async (event) => {
+            const player = event.target as YT.Player;
+            const videoData = player.getVideoData();
+            if (videoData?.title) {
+              await fetchLyrics(videoData.title);
+            }
+          },
+          onStateChange: (event) => {
+            setIsPlaying(event.data === window.YT.PlayerState.PLAYING);
+          },
+        },
+      });
+    }
+  };
+
   return (
     <Card className="p-6 glass-panel">
+      <div className="mb-4">
+        <Input
+          type="password"
+          value={apiKey}
+          onChange={(e) => setApiKey(e.target.value)}
+          placeholder="Enter X.AI API Key"
+          className="mb-4"
+        />
+      </div>
+
       <form onSubmit={handleUrlSubmit} className="mb-4">
         <div className="flex gap-2">
           <Input
